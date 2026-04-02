@@ -1,73 +1,51 @@
-
+#!/usr/bin/env python3
 import zmq
-
 import time
-
-import json
+import pmt
 
 context = zmq.Context()
-
 socket = context.socket(zmq.PUB)
-
 socket.bind("tcp://127.0.0.1:5001")
+time.sleep(1.0)
 
-# Give subscriber time to connect
+print("Clean MARP ADS-B Simulator — PDU cons pair (matches real gr-iio-marp flowgraph)")
 
-time.sleep(1)
-
-planes = [
-
+base_planes = [
     {
-
-        'snr': 18.5, 'df': 17, 'icao': 'ab69dc',
-
-        'datetime': '2026-03-27 18:02:36.583059 UTC',
-
-        'timestamp': 1774634556.583059, 'num_msgs': 11,
-
-        'longitude': -82.794, 'latitude': 34.623,
-
-        'vertical_rate': 0, 'heading': 60.8,
-
-        'speed': 108.7, 'altitude': 2950, 'callsign': 'DAL123'
-
+        "icao": "ab69dc",
+        "callsign": "DAL123",
+        "latitude": 34.623,
+        "longitude": -82.794,
+        "altitude": 2950,
+        "heading": 60.8,
+        "speed": 108.7,
+        "vertical_rate": 0
     },
-
     {
-
-        'snr': 20.5, 'df': 17, 'icao': 'ac7103',
-
-        'datetime': '2026-03-27 18:02:39.275190 UTC',
-
-        'timestamp': 1774634559.275, 'num_msgs': 5,
-
-        'longitude': -82.810, 'latitude': 34.651,
-
-        'vertical_rate': 768, 'heading': 145.5,
-
-        'speed': 432.9, 'altitude': 35000, 'callsign': 'UAL456'
-
+        "icao": "ac7103",
+        "callsign": "UAL456",
+        "latitude": 34.651,
+        "longitude": -82.810,
+        "altitude": 35000,
+        "heading": 145.5,
+        "speed": 432.9,
+        "vertical_rate": 768
     }
-
 ]
 
-print("Sending fake plane data every 2 seconds... (Ctrl+C to stop)")
-
 while True:
+    for plane in base_planes:
+        plane["latitude"]  += 0.0012
+        plane["longitude"] += 0.0018
+        plane["timestamp"] = time.time()
+        plane["datetime"]  = time.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    for plane in planes:
+        # === Match real GNU Radio PDU format: cons(metadata_dict, data_vector) ===
+        metadata = pmt.to_pmt({k: v for k, v in plane.items() if k != "datetime"})
+        pdu = pmt.cons(metadata, pmt.make_u8vector(0, 0))
 
-        # Shift position slightly each loop to animate on map
+        serialized = pmt.serialize_str(pdu)
+        socket.send(serialized)
+        print(f"Sent PDU → {plane['icao']} {plane['callsign']} @ {plane['latitude']:.4f}, {plane['longitude']:.4f}")
 
-        plane['longitude'] += 0.001
-
-        plane['latitude']  += 0.001
-
-        socket.send_json(plane)
-
-        print("Sent:", plane['icao'], plane['callsign'],
-
-              plane['latitude'], plane['longitude'])
-
-        time.sleep(2)
-
+    time.sleep(1.8)
