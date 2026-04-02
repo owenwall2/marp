@@ -6,7 +6,7 @@
 #
 # GNU Radio Python Flow Graph
 # Title: Not titled yet
-# GNU Radio version: v3.8.5.0-6-g57bd109d
+# GNU Radio version: 3.8.1.0
 
 from distutils.version import StrictVersion
 
@@ -35,7 +35,6 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio.qtgui import Range, RangeWidget
 import iio
-
 from gnuradio import qtgui
 
 class untitled(gr.top_block, Qt.QWidget):
@@ -82,7 +81,7 @@ class untitled(gr.top_block, Qt.QWidget):
         ##################################################
         self._freq_range = Range(int(87.9*10**6), int(107.9*10**6), int(200*10**3), int(87.9*10**6), 200)
         self._freq_win = RangeWidget(self._freq_range, self.set_freq, 'freq', "counter_slider", float)
-        self.top_layout.addWidget(self._freq_win)
+        self.top_grid_layout.addWidget(self._freq_win)
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
                 interpolation=12,
                 decimation=125,
@@ -127,13 +126,14 @@ class untitled(gr.top_block, Qt.QWidget):
             self.qtgui_freq_sink_x_0.set_line_alpha(i, alphas[i])
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget)
-        self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.iio_fmcomms2_source_0 = iio.fmcomms2_source_f32c('ip:192.168.10.2', freq, samp_rate, 20000000, True, False, 32768, True, True, True, 'manual', 64, 'manual', 64, 'A_BALANCED', '', True)
+        self.top_grid_layout.addWidget(self._qtgui_freq_sink_x_0_win)
+        self.iio_fmcomms2_source_0 = iio.fmcomms2_source_f32c('ip:192.168.65.254', freq, samp_rate, 20000000, True, False, 32768, True, True, True, 'manual', 64, 'manual', 64, 'A_BALANCED', '', True)
         self.audio_sink_0 = audio.sink(48000, '', True)
         self.analog_wfm_rcv_0 = analog.wfm_rcv(
         	quad_rate=48000*4,
         	audio_decimation=4,
         )
+
 
 
         ##################################################
@@ -143,7 +143,6 @@ class untitled(gr.top_block, Qt.QWidget):
         self.connect((self.iio_fmcomms2_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.iio_fmcomms2_source_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.analog_wfm_rcv_0, 0))
-
 
     def closeEvent(self, event):
         self.settings = Qt.QSettings("GNU Radio", "untitled")
@@ -168,8 +167,6 @@ class untitled(gr.top_block, Qt.QWidget):
 
 
 
-
-
 def main(top_block_cls=untitled, options=None):
 
     if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
@@ -178,9 +175,7 @@ def main(top_block_cls=untitled, options=None):
     qapp = Qt.QApplication(sys.argv)
 
     tb = top_block_cls()
-
     tb.start()
-
     tb.show()
 
     def sig_handler(sig=None, frame=None):
@@ -196,9 +191,9 @@ def main(top_block_cls=untitled, options=None):
     def quitting():
         tb.stop()
         tb.wait()
-
     qapp.aboutToQuit.connect(quitting)
     qapp.exec_()
+
 
 if __name__ == '__main__':
     main()

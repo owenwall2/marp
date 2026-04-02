@@ -14,6 +14,16 @@ from flask import Flask, request, send_from_directory, jsonify
 from flask_socketio import SocketIO
 from threading import Thread
 import zmq.green as zmq
+import numpy as np
+from collections import deque
+
+# # GNURadio-IIO and libiio hack
+# import sys
+# if "/usr/lib/python3.8/site-packages" not in sys.path:
+#     sys.path.insert(0, "/usr/lib/python3.8/site-packages")
+
+# import iio_hw
+
 
 try:
     import pmt
@@ -21,6 +31,9 @@ try:
 except ImportError:
     print("WARNING: pmt not available, ZMQ messages will be raw bytes")
     HAS_PMT = False
+
+ZED_IP = "192.168.65.254"   # ZED board's IP over Ethernet
+_iio_ctx = None
 
 # ── Network config ────────────────────────────────────────────
 HTTP_ADDRESS = "0.0.0.0"
@@ -31,11 +44,9 @@ ZMQ_ADDRESS  = "127.0.0.1"
 ZMQ_PORTS = {
     "adsb":  5001,
     "fm":    5002,
-    "radar": 5003,
+    "radar_ref": 5003,
+    "radar_surv": 5004,
 }
-
-# Reverse channel: server → GNU Radio (ZMQ PUB, GR ZMQ SUB Message Source)
-ZMQ_CONTROL_PORT = 5010
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -55,36 +66,67 @@ app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 app.config["SECRET_KEY"] = "marp-secret"
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
-# ── ZMQ control socket (server → GNU Radio) ───────────────────
-_ctrl_context = zmq.Context()
-_ctrl_socket  = _ctrl_context.socket(zmq.PUB)
-_ctrl_socket.bind("tcp://0.0.0.0:{:d}".format(ZMQ_CONTROL_PORT))
-print("ZMQ control socket bound on port {}".format(ZMQ_CONTROL_PORT))
+
+# Radar buffers
+radar_ref_buffer  = deque(maxlen=2_000_000)
+radar_surv_buffer = deque(maxlen=2_000_000)
 
 
-def send_control_message(app_name, params):
-    """Send a parameter update to GNU Radio via ZMQ PUB → GR ZMQ SUB."""
-    if not HAS_PMT:
-        print("Cannot send control: pmt not available")
-        return
+def _get_iio_context():
+    """Lazy-connect to the ZED board's IIO daemon."""
+    global _iio_ctx
     try:
-        payload = dict(params)
-        payload["app"] = app_name
-        meta      = pmt.to_pmt(payload)
-        pdu       = pmt.cons(meta, pmt.make_u8vector(0, 0))
-        _ctrl_socket.send(pmt.serialize_str(pdu))
-        print("Control message sent for app={} params={}".format(app_name, params))
+        import iio
+        if _iio_ctx is None:
+            _iio_ctx = iio_hw.Context(f"ip:{ZED_IP}")
+            print("IIO connected to ZED board at", ZED_IP)
+        return _iio_ctx
     except Exception as e:
-        print("Control send error:", e)
+        print("IIO connection failed:", e)
+        _iio_ctx = None
+        return None
+
+def apply_hardware_params(app_name, params):
+    """Push parameter changes directly to FMCOMMS3 via libiio."""
+    ctx = _get_iio_context()
+    if ctx is None:
+        print("IIO not available — skipping hardware update")
+        return
+
+    try:
+        import iio
+        phy = ctx.find_device("ad9361-phy")
+
+        if "center_freq" in params:
+            freq_hz = int(params["center_freq"])
+            phy.find_channel("altvoltage0", True).attrs["frequency"].value = str(freq_hz)
+            print("IIO: center_freq set to {} Hz".format(freq_hz))
+
+        if "gain" in params:
+            # Switch to manual gain mode first
+            phy.find_channel("voltage0", False).attrs["gain_control_mode"].value = "manual"
+            phy.find_channel("voltage0", False).attrs["hardwaregain"].value = str(int(params["gain"]))
+            print("IIO: gain set to {} dB".format(params["gain"]))
+
+        if "bandwidth" in params:
+            bw_hz = int(params["bandwidth"])
+            phy.find_channel("voltage0", False).attrs["rf_bandwidth"].value = str(bw_hz)
+            print("IIO: bandwidth set to {} Hz".format(bw_hz))
+
+    except Exception as e:
+        print("IIO param apply error:", e)
+        _iio_ctx = None   # force reconnect next time
 
 
-def make_zmq_thread(app_name, port):
+def make_adsb_zmq_thread():
+    """Thread to receive ADS-B PMT messages from ZMQ and emit to SocketIO"""
     def _thread():
         context = zmq.Context()
-        socket  = context.socket(zmq.SUB)
+        socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, b"")
-        socket.connect("tcp://{}:{:d}".format(ZMQ_ADDRESS, port))
-        print("ZMQ listener [{:6s}] connected to tcp://{}:{}".format(app_name.upper(), ZMQ_ADDRESS, port))
+        port = ZMQ_PORTS["adsb"]
+        socket.connect(f"tcp://{ZMQ_ADDRESS}:{port}")
+        print(f"ZMQ listener [ADSB ] connected to tcp://{ZMQ_ADDRESS}:{port}")
 
         while True:
             try:
@@ -93,21 +135,18 @@ def make_zmq_thread(app_name, port):
                 socketio.emit("serverStatus", {"zmq_connected": True})
 
                 if HAS_PMT:
-                    pdu  = pmt.deserialize_str(pdu_bin)
+                    pdu = pmt.deserialize_str(pdu_bin)
                     data = pmt.to_python(pmt.car(pdu))
                 else:
-                    data = {"raw": pdu_bin.hex(), "app": app_name}
+                    data = {"raw": pdu_bin.hex(), "app": "adsb"}
 
-                if state["mode"] == app_name:
-                    if app_name == "adsb":
-                        socketio.emit("updatePlane", data)
-                    elif app_name == "radar":
-                        socketio.emit("updateRadar", data)
+                if state["mode"] == "adsb":
+                    socketio.emit("updatePlane", data)
 
-                print("[{}] {}".format(app_name.upper(), data))
+                print(f"[ADSB ] {data}")
 
             except Exception as e:
-                print("ZMQ error [{}]: {}".format(app_name, e))
+                print(f"ZMQ error [ADSB ]: {e}")
                 time.sleep(1)
 
     return _thread
@@ -165,6 +204,91 @@ def make_fm_zmq_thread(port):
 
     return _thread
 
+def radar_ref_handler(raw):
+    radar_ref_buffer.extend(np.frombuffer(raw, dtype=np.complex64))
+
+def radar_surv_handler(raw):
+    radar_surv_buffer.extend(np.frombuffer(raw, dtype=np.complex64))
+
+def make_radar_thread(port, handler):
+    def _thread():
+        context = zmq.Context()
+        socket = context.socket(zmq.SUB)
+        socket.setsockopt(zmq.SUBSCRIBE, b"")
+        socket.connect(f"tcp://{ZMQ_ADDRESS}:{port}")
+        print(f"ZMQ listener [RADAR ] connected to tcp://{ZMQ_ADDRESS}:{port}")
+
+        while True:
+            try:
+                raw = socket.recv()
+                handler(raw)
+            except Exception as e:
+                print(f"ZMQ error [RADAR]: {e}")
+                time.sleep(0.1)
+    return _thread
+
+def radar_processing_thread():
+    fs = 583e6
+    c  = 299792458.0
+
+    N = 1024
+    step = 1024
+    num_blocks = 64
+    nfft_delay = 2 * N - 1
+
+    lags = np.arange(-(N - 1), N)
+    path_diff_m = c * lags / fs
+
+    while True:
+        try:
+            if len(radar_ref_buffer) < (num_blocks * step + N):
+                time.sleep(0.05)
+                continue
+
+            if len(radar_surv_buffer) < (num_blocks * step + N):
+                time.sleep(0.05)
+                continue
+
+            # Pull synchronized chunks
+            ref  = np.array([radar_ref_buffer.popleft()  for _ in range(num_blocks * step + N)])
+            surv = np.array([radar_surv_buffer.popleft() for _ in range(num_blocks * step + N)])
+
+            corr_matrix = np.zeros((num_blocks, nfft_delay), dtype=np.complex64)
+
+            for i in range(num_blocks):
+                start = i * step
+                stop  = start + N
+
+                block_ref  = ref[start:stop]
+                block_surv = surv[start:stop]
+
+                X = np.fft.fft(block_ref, nfft_delay)
+                Y = np.fft.fft(block_surv, nfft_delay)
+
+                corr = np.fft.ifft(Y * np.conj(X))
+                corr_matrix[i, :] = corr
+
+            doppler_map = np.fft.fftshift(
+                np.fft.fft(corr_matrix, axis=0),
+                axes=0
+            )
+
+            rd_map = 20 * np.log10(np.abs(doppler_map) + 1e-12)
+
+            # Downsample for web (VERY IMPORTANT)
+            rd_small = rd_map[::2, ::4].tolist()
+
+            if state["mode"] == "radar":
+                socketio.emit("updateRadar", {
+                    "map": rd_small,
+                    "range_axis": path_diff_m[::4].tolist(),
+                    "doppler_bins": list(range(-num_blocks//2, num_blocks//2, 2))
+                })
+
+        except Exception as e:
+            print("Radar processing error:", e)
+            time.sleep(0.1)
+
 # ── REST API ──────────────────────────────────────────────────
 
 @app.route("/api/mode", methods=["GET"])
@@ -172,12 +296,14 @@ def get_mode():
     return jsonify({"mode": state["mode"]})
 
 
+
+VALID_MODES = ["adsb", "fm", "radar"]
 @app.route("/api/mode", methods=["POST"])
 def set_mode():
     body = request.get_json(silent=True) or {}
     mode = body.get("mode", "").lower()
-    if mode not in ZMQ_PORTS:
-        return jsonify({"error": "Unknown mode. Choose: {}".format(list(ZMQ_PORTS.keys()))}), 400
+    if mode not in VALID_MODES:
+        return jsonify({"error": "Unknown mode. Choose: {}".format(VALID_MODES)}), 400
     state["mode"] = mode
     print("Mode switched to:", mode)
     socketio.emit("modeChanged", {"mode": mode})
@@ -201,8 +327,8 @@ def set_params():
     # Merge incoming params
     state["params"][app_name].update(params)
 
-    # Forward to GNU Radio
-    send_control_message(app_name, state["params"][app_name])
+    # Direct hardware control — no ZMQ needed
+    apply_hardware_params(app_name, params)
 
     return jsonify({"ok": True, "app": app_name, "params": state["params"][app_name]})
 
@@ -249,16 +375,34 @@ if __name__ == "__main__":
     print("Static dir:", STATIC_DIR)
     print("Starting MARP server on {}:{}".format(HTTP_ADDRESS, HTTP_PORT))
 
-    # ADS-B and Radar use the PMT message thread
-    for app_name in ["adsb", "radar"]:
-        t = Thread(target=make_zmq_thread(app_name, ZMQ_PORTS[app_name]))
-        t.daemon = True
-        t.start()
+# ── ADS-B (PMT messages) ───────────────────────────────
+    Thread(
+        target=make_adsb_zmq_thread(), 
+        daemon=True
+    ).start()
 
-    # FM uses the raw float32 stream thread
-    t = Thread(target=make_fm_zmq_thread(ZMQ_PORTS["fm"]))
-    t.daemon = True
-    t.start()
+    # ── FM (raw float32 stream) ────────────────────────────
+    Thread(
+        target=make_fm_zmq_thread(ZMQ_PORTS["fm"]),
+        daemon=True
+    ).start()
+
+    # ── Radar streams (complex64) ──────────────────────────
+    Thread(
+        target=make_radar_thread(ZMQ_PORTS["radar_ref"], radar_ref_handler),
+        daemon=True
+    ).start()
+
+    Thread(
+        target=make_radar_thread(ZMQ_PORTS["radar_surv"], radar_surv_handler),
+        daemon=True
+    ).start()
+
+    # ── Radar processing ───────────────────────────────────
+    Thread(
+        target=radar_processing_thread,
+        daemon=True
+    ).start()
 
     socketio.run(app, host=HTTP_ADDRESS, port=HTTP_PORT,
                  debug=True, use_reloader=False)
