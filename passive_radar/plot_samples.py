@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-ref = np.fromfile("Data/ref", dtype=np.complex64)
-surv = np.fromfile("Data/surv", dtype=np.complex64)
+ref = np.fromfile("data/ref", dtype=np.complex64)
+surv = np.fromfile("data/surv", dtype=np.complex64)
 
 fs = 583e6
 c = 299792458.0

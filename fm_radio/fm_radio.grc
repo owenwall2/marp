@@ -108,7 +108,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [808, 444.0]
+    coordinate: [816, 444.0]
     rotation: 0
     state: enabled
 - name: iio_fmcomms2_source_0
