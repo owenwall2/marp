@@ -36,7 +36,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: int(88.1e6)
+    value: int(1090e6)
   states:
     bus_sink: false
     bus_source: false
@@ -163,63 +163,6 @@ blocks:
     coordinate: [884, 257]
     rotation: 0
     state: enabled
-- name: analog_noise_source_x_0
-  id: analog_noise_source_x
-  parameters:
-    affinity: ''
-    alias: ''
-    amp: '1'
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '0'
-    type: complex
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [115, 586]
-    rotation: 0
-    state: enabled
-- name: analog_noise_source_x_1
-  id: analog_noise_source_x
-  parameters:
-    affinity: ''
-    alias: ''
-    amp: '1'
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '0'
-    type: complex
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [114, 477]
-    rotation: 0
-    state: enabled
-- name: analog_noise_source_x_2
-  id: analog_noise_source_x
-  parameters:
-    affinity: ''
-    alias: ''
-    amp: '1'
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    noise_type: analog.GR_GAUSSIAN
-    seed: '0'
-    type: complex
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [186, 308]
-    rotation: 0
-    state: disabled
 - name: analog_wfm_rcv_0
   id: analog_wfm_rcv
   parameters:
@@ -237,42 +180,6 @@ blocks:
     coordinate: [642, 359]
     rotation: 0
     state: enabled
-- name: blocks_add_xx_0
-  id: blocks_add_xx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_inputs: '2'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [705, 484]
-    rotation: 0
-    state: enabled
-- name: blocks_add_xx_1
-  id: blocks_add_xx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_inputs: '2'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [744, 613]
-    rotation: 0
-    state: enabled
 - name: blocks_complex_to_mag_squared_0
   id: blocks_complex_to_mag_squared
   parameters:
@@ -287,25 +194,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [466, 115]
-    rotation: 0
-    state: enabled
-- name: blocks_delay_0
-  id: blocks_delay
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    delay: '512'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    num_ports: '1'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [609, 588]
     rotation: 0
     state: enabled
 - name: blocks_null_sink_0
@@ -348,44 +236,6 @@ blocks:
     coordinate: [379, 210]
     rotation: 0
     state: enabled
-- name: blocks_throttle_0
-  id: blocks_throttle
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    ignoretag: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samples_per_second: '32000'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [386, 601]
-    rotation: 0
-    state: enabled
-- name: blocks_throttle_1
-  id: blocks_throttle
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    ignoretag: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samples_per_second: '32000'
-    type: complex
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [387, 499]
-    rotation: 0
-    state: enabled
 - name: iio_fmcomms2_source_0
   id: iio_fmcomms2_source
   parameters:
@@ -398,7 +248,7 @@ blocks:
     comment: ''
     filter: ''
     frequency: fc
-    gain1: '''manual'''
+    gain1: '''hybrid'''
     gain2: '''manual'''
     manual_gain1: '64'
     manual_gain2: '64'
@@ -408,16 +258,16 @@ blocks:
     rf_port_select: '''A_BALANCED'''
     rfdc: 'True'
     rx1_en: 'True'
-    rx2_en: 'False'
+    rx2_en: 'True'
     samplerate: fs
     uri: ip:192.168.65.254
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [136, 123]
+    coordinate: [99, 123]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: qtgui_time_sink_x_0
   id: qtgui_time_sink_x
   parameters:
@@ -546,7 +396,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [32, 345]
+    coordinate: [14, 403]
     rotation: 0
     state: enabled
 - name: zeromq_pub_msg_sink_0
@@ -629,22 +479,13 @@ connections:
 - [adsb_demod_0, demodulated, adsb_decoder_0, demodulated]
 - [adsb_framer_1, '0', adsb_demod_0, '0']
 - [analog_const_source_x_0, '0', qtgui_time_sink_x_0, '1']
-- [analog_noise_source_x_0, '0', blocks_throttle_0, '0']
-- [analog_noise_source_x_1, '0', blocks_selector_0, '0']
-- [analog_noise_source_x_2, '0', blocks_selector_0, '0']
 - [analog_wfm_rcv_0, '0', zeromq_pub_sink_0, '0']
-- [blocks_add_xx_0, '0', zeromq_pub_sink_1, '0']
-- [blocks_add_xx_1, '0', zeromq_pub_sink_2, '0']
 - [blocks_complex_to_mag_squared_0, '0', adsb_framer_1, '0']
-- [blocks_delay_0, '0', blocks_add_xx_1, '0']
 - [blocks_selector_0, '0', blocks_complex_to_mag_squared_0, '0']
 - [blocks_selector_0, '1', rational_resampler_xxx_0, '0']
-- [blocks_selector_0, '2', blocks_throttle_1, '0']
-- [blocks_throttle_0, '0', blocks_add_xx_0, '1']
-- [blocks_throttle_0, '0', blocks_add_xx_1, '1']
-- [blocks_throttle_1, '0', blocks_add_xx_0, '0']
-- [blocks_throttle_1, '0', blocks_delay_0, '0']
+- [blocks_selector_0, '2', zeromq_pub_sink_1, '0']
 - [iio_fmcomms2_source_0, '0', blocks_selector_0, '0']
+- [iio_fmcomms2_source_0, '1', zeromq_pub_sink_2, '0']
 - [rational_resampler_xxx_0, '0', analog_wfm_rcv_0, '0']
 
 metadata:

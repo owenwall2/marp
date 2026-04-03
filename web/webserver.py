@@ -100,9 +100,9 @@ def apply_hardware_params(app_name, params):
     """Push parameter changes directly to FMCOMMS3 via libiio."""
     ctx = _get_iio_context()
     if ctx is None:
-        print("IIO not available — skipping hardware update")
-        return
+        return {"ok": False, "msg": "IIO unavailable — board not reachable"}
 
+    applied = []
     try:
         import iio
         phy = ctx.find_device("ad9361-phy")
@@ -111,21 +111,30 @@ def apply_hardware_params(app_name, params):
             freq_hz = int(params["center_freq"])
             phy.find_channel("altvoltage0", True).attrs["frequency"].value = str(freq_hz)
             print("IIO: center_freq set to {} Hz".format(freq_hz))
+            applied.append("freq {:.3f} MHz".format(freq_hz / 1e6))
 
         if "gain" in params:
-            # Switch to manual gain mode first
+            gain_db = "{:.6f}".format(float(params["gain"]))
             phy.find_channel("voltage0", False).attrs["gain_control_mode"].value = "manual"
-            phy.find_channel("voltage0", False).attrs["hardwaregain"].value = str(int(params["gain"]))
-            print("IIO: gain set to {} dB".format(params["gain"]))
+            phy.find_channel("voltage1", False).attrs["gain_control_mode"].value = "manual"
+            phy.find_channel("voltage0", False).attrs["hardwaregain"].value = gain_db
+            phy.find_channel("voltage1", False).attrs["hardwaregain"].value = gain_db
+            print("IIO: gain set to {} dB on both RX1 and RX2".format(gain_db))
+            applied.append("gain {} dB (RX1+RX2)".format(gain_db))
 
         if "bandwidth" in params:
             bw_hz = int(params["bandwidth"])
             phy.find_channel("voltage0", False).attrs["rf_bandwidth"].value = str(bw_hz)
             print("IIO: bandwidth set to {} Hz".format(bw_hz))
+            applied.append("bw {:.1f} MHz".format(bw_hz / 1e6))
+
+        msg = "HW OK: " + ", ".join(applied) if applied else "HW: nothing to change"
+        return {"ok": True, "msg": msg}
 
     except Exception as e:
         print("IIO param apply error:", e)
         _iio_ctx = None   # force reconnect next time
+        return {"ok": False, "msg": "HW ERR: {}".format(str(e))}
 
 
 def make_adsb_zmq_thread():
@@ -303,11 +312,11 @@ def radar_processing_thread():
 
             # Downsample for web (VERY IMPORTANT)
             rd_small = rd_map[::2, ::4].tolist()
-
+            # mid = N - 1  # only plotting from lag=0 onwards
             if state["mode"] == "radar":
                 socketio.emit("updateRadar", {
                     "map": rd_small,
-                    "range_axis": path_diff_m[::4].tolist(),
+                    "range_axis": path_diff_m[::4].tolist(), # [mid::4]
                     "doppler_bins": list(range(-num_blocks//2, num_blocks//2, 2))
                 })
 
@@ -352,20 +361,24 @@ def get_params():
 
 @app.route("/api/params", methods=["POST"])
 def set_params():
-    body = request.get_json(silent=True) or {}
+    body     = request.get_json(silent=True) or {}
     app_name = body.get("app", state["mode"]).lower()
     params   = body.get("params", {})
 
     if app_name not in state["params"]:
         return jsonify({"error": "Unknown app"}), 400
 
-    # Merge incoming params
     state["params"][app_name].update(params)
 
-    # Direct hardware control — no ZMQ needed
-    apply_hardware_params(app_name, params)
+    # Try hardware update and report what happened
+    hw_result = apply_hardware_params(app_name, params)
 
-    return jsonify({"ok": True, "app": app_name, "params": state["params"][app_name]})
+    return jsonify({
+        "ok":      hw_result["ok"],
+        "app":     app_name,
+        "params":  state["params"][app_name],
+        "hw_msg":  hw_result["msg"],   # human-readable outcome
+    })
 
 
 @app.route("/api/status", methods=["GET"])

@@ -41,6 +41,7 @@
   socket.on('updateFM', function (data) {
     // FM audio engine always receives data so buffer stays warm,
     // but visual updates only happen when FM panel is active.
+    if (currentApp !== 'fm') return;
     FM.update(data);
   });
 
@@ -125,15 +126,29 @@
       };
     }
 
-    fetch('/api/params', {
+  fetch('/api/params', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ app: app, params: params })
-    })
-    .then(function (r) { return r.json(); })
-    .then(function ()  { log('Params sent → ' + app.toUpperCase(), 'ok'); })
-    .catch(function (e){ log('Param error: ' + e, 'err'); });
-  }
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+      if (d.ok) {
+          // Green: server accepted + hardware confirmed
+          log('Params sent → ' + app.toUpperCase(), 'ok');
+          if (d.hw_msg) log(d.hw_msg, 'ok');
+      } else {
+          // Orange: request reached server but hardware failed
+          log('Params sent → ' + app.toUpperCase(), 'ok');
+          log(d.hw_msg || d.error || 'Hardware update failed', 'err');
+      }
+  })
+  .catch(function (e) {
+      // Red: never reached the server (network drop, double-press race, etc.)
+      log('Param send FAILED: ' + e, 'err');
+  });
+  } 
+  
 
   // ── Status helpers ─────────────────────────────────────────
   function _setWsStatus(connected) {
