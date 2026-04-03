@@ -20,7 +20,7 @@ git clone --depth 1 --branch v0.26 https://github.com/analogdevicesinc/libiio.gi
 cd libiio
 mkdir build && cd build
 
-cmake .. -DCMAKE_BUILD_TYPE=Release  -DCMAKE_INSTALL_PREFIX=/usr
+cmake .. -DCMAKE_BUILD_TYPE=Release  -DCMAKE_INSTALL_PREFIX=/usr #-DPYTHON_BINDINGS=ON
 
 make -j$(nproc)
 make install

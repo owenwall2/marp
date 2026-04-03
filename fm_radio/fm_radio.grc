@@ -135,7 +135,7 @@ blocks:
     rx1_en: 'True'
     rx2_en: 'False'
     samplerate: samp_rate
-    uri: ip:192.168.10.2
+    uri: ip:192.168.65.254
   states:
     bus_sink: false
     bus_source: false

@@ -1,0 +1,492 @@
+options:
+  parameters:
+    author: Matt Hostetter
+    category: Custom
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: app
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: ADS-B Receiver
+    window_size: 4096,4096
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 12]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: fc
+  id: variable
+  parameters:
+    comment: ''
+    value: int(1090e6)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [176, 12]
+    rotation: 0
+    state: enabled
+- name: fs
+  id: variable
+  parameters:
+    comment: ''
+    value: int(2e6)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 12]
+    rotation: 0
+    state: enabled
+- name: gain
+  id: variable
+  parameters:
+    comment: ''
+    value: '100'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [349, 20]
+    rotation: 0
+    state: true
+- name: select_index
+  id: variable
+  parameters:
+    comment: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [458, 18]
+    rotation: 0
+    state: true
+- name: threshold
+  id: variable_qtgui_entry
+  parameters:
+    comment: ''
+    gui_hint: 0,1,1,1
+    label: Detection Threshold
+    type: real
+    value: '0.010'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [584, 12]
+    rotation: 0
+    state: enabled
+- name: adsb_decoder_0
+  id: adsb_decoder
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    error_corr: '"None"'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    msg_filter: '"Extended Squitter Only"'
+    print_level: '"Brief"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1076, 137]
+    rotation: 0
+    state: enabled
+- name: adsb_demod_0
+  id: adsb_demod
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    fs: fs
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [868, 157]
+    rotation: 0
+    state: enabled
+- name: adsb_framer_1
+  id: adsb_framer
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    fs: fs
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    threshold: threshold
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [644, 161]
+    rotation: 0
+    state: enabled
+- name: analog_const_source_x_0
+  id: analog_const_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    const: threshold
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [884, 257]
+    rotation: 0
+    state: enabled
+- name: analog_wfm_rcv_0
+  id: analog_wfm_rcv
+  parameters:
+    affinity: ''
+    alias: ''
+    audio_decimation: '4'
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quad_rate: 48000*4
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [642, 359]
+    rotation: 0
+    state: enabled
+- name: blocks_complex_to_mag_squared_0
+  id: blocks_complex_to_mag_squared
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [466, 115]
+    rotation: 0
+    state: enabled
+- name: blocks_null_sink_0
+  id: blocks_null_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    bus_structure_sink: '[[0,],]'
+    comment: ''
+    num_inputs: '1'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1139, 325]
+    rotation: 0
+    state: enabled
+- name: blocks_selector_0
+  id: blocks_selector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    enabled: 'True'
+    input_index: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_inputs: '1'
+    num_outputs: '3'
+    output_index: select_index
+    showports: 'True'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [379, 210]
+    rotation: 0
+    state: enabled
+- name: iio_fmcomms2_source_0
+  id: iio_fmcomms2_source
+  parameters:
+    affinity: ''
+    alias: ''
+    auto_filter: 'True'
+    bandwidth: '20000000'
+    bbdc: 'True'
+    buffer_size: '32768'
+    comment: ''
+    filter: ''
+    frequency: fc
+    gain1: '''hybrid'''
+    gain2: '''manual'''
+    manual_gain1: '64'
+    manual_gain2: '64'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quadrature: 'True'
+    rf_port_select: '''A_BALANCED'''
+    rfdc: 'True'
+    rx1_en: 'True'
+    rx2_en: 'True'
+    samplerate: fs
+    uri: ip:192.168.65.254
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [99, 123]
+    rotation: 0
+    state: enabled
+- name: qtgui_time_sink_x_0
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'True'
+    gui_hint: 1,0,1,2
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'False'
+    marker1: '0'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '2'
+    size: int(fs*150e-6)
+    srate: int(fs)
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '1.25e-6'
+    tr_level: '0'
+    tr_mode: qtgui.TRIG_MODE_TAG
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '"burst"'
+    type: float
+    update_time: 1.0/100.0
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '1'
+    ymin: '0'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1076, 225]
+    rotation: 0
+    state: enabled
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '125'
+    fbw: '0.4'
+    interp: '12'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: ''
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [404, 342]
+    rotation: 0
+    state: enabled
+- name: xmlrpc_server_0
+  id: xmlrpc_server
+  parameters:
+    addr: 0.0.0.0
+    alias: ''
+    comment: ''
+    port: '5010'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [14, 403]
+    rotation: 0
+    state: enabled
+- name: zeromq_pub_msg_sink_0
+  id: zeromq_pub_msg_sink
+  parameters:
+    address: tcp://127.0.0.1:5001
+    affinity: ''
+    alias: ''
+    comment: ''
+    timeout: '10'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1428, 128]
+    rotation: 0
+    state: enabled
+- name: zeromq_pub_sink_0
+  id: zeromq_pub_sink
+  parameters:
+    address: tcp://127.0.0.1:5002
+    affinity: ''
+    alias: ''
+    comment: ''
+    hwm: '-1'
+    pass_tags: 'False'
+    timeout: '10'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [902, 353]
+    rotation: 0
+    state: enabled
+- name: zeromq_pub_sink_1
+  id: zeromq_pub_sink
+  parameters:
+    address: tcp://127.0.0.1:5003
+    affinity: ''
+    alias: ''
+    comment: ''
+    hwm: '-1'
+    pass_tags: 'False'
+    timeout: '10'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [889, 481]
+    rotation: 0
+    state: enabled
+- name: zeromq_pub_sink_2
+  id: zeromq_pub_sink
+  parameters:
+    address: tcp://127.0.0.1:5004
+    affinity: ''
+    alias: ''
+    comment: ''
+    hwm: '-1'
+    pass_tags: 'False'
+    timeout: '10'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [883, 598]
+    rotation: 0
+    state: enabled
+
+connections:
+- [adsb_decoder_0, decoded, zeromq_pub_msg_sink_0, in]
+- [adsb_demod_0, '0', blocks_null_sink_0, '0']
+- [adsb_demod_0, '0', qtgui_time_sink_x_0, '0']
+- [adsb_demod_0, demodulated, adsb_decoder_0, demodulated]
+- [adsb_framer_1, '0', adsb_demod_0, '0']
+- [analog_const_source_x_0, '0', qtgui_time_sink_x_0, '1']
+- [analog_wfm_rcv_0, '0', zeromq_pub_sink_0, '0']
+- [blocks_complex_to_mag_squared_0, '0', adsb_framer_1, '0']
+- [blocks_selector_0, '0', blocks_complex_to_mag_squared_0, '0']
+- [blocks_selector_0, '1', rational_resampler_xxx_0, '0']
+- [blocks_selector_0, '2', zeromq_pub_sink_1, '0']
+- [iio_fmcomms2_source_0, '0', blocks_selector_0, '0']
+- [iio_fmcomms2_source_0, '1', zeromq_pub_sink_2, '0']
+- [rational_resampler_xxx_0, '0', analog_wfm_rcv_0, '0']
+
+metadata:
+  file_format: 1
