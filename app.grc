@@ -112,7 +112,7 @@ blocks:
     bus_structure: null
     coordinate: [1076, 137]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: adsb_demod_0
   id: adsb_demod
   parameters:
@@ -128,7 +128,7 @@ blocks:
     bus_structure: null
     coordinate: [868, 157]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: adsb_framer_1
   id: adsb_framer
   parameters:
@@ -145,7 +145,7 @@ blocks:
     bus_structure: null
     coordinate: [644, 161]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: analog_const_source_x_0
   id: analog_const_source_x
   parameters:
@@ -162,7 +162,7 @@ blocks:
     bus_structure: null
     coordinate: [884, 257]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: analog_noise_source_x_0
   id: analog_noise_source_x
   parameters:
@@ -236,7 +236,7 @@ blocks:
     bus_structure: null
     coordinate: [642, 359]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: blocks_add_xx_0
   id: blocks_add_xx
   parameters:
@@ -288,7 +288,7 @@ blocks:
     bus_structure: null
     coordinate: [466, 115]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: blocks_delay_0
   id: blocks_delay
   parameters:
@@ -324,7 +324,7 @@ blocks:
     bus_structure: null
     coordinate: [1139, 325]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: blocks_selector_0
   id: blocks_selector
   parameters:
@@ -347,7 +347,7 @@ blocks:
     bus_structure: null
     coordinate: [379, 210]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: blocks_throttle_0
   id: blocks_throttle
   parameters:
@@ -514,7 +514,7 @@ blocks:
     bus_structure: null
     coordinate: [1076, 225]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: rational_resampler_xxx_0
   id: rational_resampler_xxx
   parameters:
@@ -534,7 +534,7 @@ blocks:
     bus_structure: null
     coordinate: [404, 342]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: xmlrpc_server_0
   id: xmlrpc_server
   parameters:
@@ -548,7 +548,7 @@ blocks:
     bus_structure: null
     coordinate: [32, 345]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: zeromq_pub_msg_sink_0
   id: zeromq_pub_msg_sink
   parameters:
@@ -563,7 +563,7 @@ blocks:
     bus_structure: null
     coordinate: [1428, 128]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: zeromq_pub_sink_0
   id: zeromq_pub_sink
   parameters:
@@ -582,7 +582,7 @@ blocks:
     bus_structure: null
     coordinate: [902, 353]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: zeromq_pub_sink_1
   id: zeromq_pub_sink
   parameters:
@@ -630,7 +630,7 @@ connections:
 - [adsb_framer_1, '0', adsb_demod_0, '0']
 - [analog_const_source_x_0, '0', qtgui_time_sink_x_0, '1']
 - [analog_noise_source_x_0, '0', blocks_throttle_0, '0']
-- [analog_noise_source_x_1, '0', blocks_throttle_1, '0']
+- [analog_noise_source_x_1, '0', blocks_selector_0, '0']
 - [analog_noise_source_x_2, '0', blocks_selector_0, '0']
 - [analog_wfm_rcv_0, '0', zeromq_pub_sink_0, '0']
 - [blocks_add_xx_0, '0', zeromq_pub_sink_1, '0']
@@ -639,6 +639,7 @@ connections:
 - [blocks_delay_0, '0', blocks_add_xx_1, '0']
 - [blocks_selector_0, '0', blocks_complex_to_mag_squared_0, '0']
 - [blocks_selector_0, '1', rational_resampler_xxx_0, '0']
+- [blocks_selector_0, '2', blocks_throttle_1, '0']
 - [blocks_throttle_0, '0', blocks_add_xx_0, '1']
 - [blocks_throttle_0, '0', blocks_add_xx_1, '1']
 - [blocks_throttle_1, '0', blocks_add_xx_0, '0']
